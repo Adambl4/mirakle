@@ -98,7 +98,7 @@ open class Mirakle : Plugin<Gradle> {
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
                             "--exclude=mirakle.gradle"
                     )
-                    args(config.rsyncToRemoteArgs)
+                    args(config.buildRsyncToRemoteArgs())
                 }
 
                 val execute = project.task<Exec>("executeOnRemote") {
@@ -144,7 +144,7 @@ open class Mirakle : Plugin<Gradle> {
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
                             "--exclude=mirakle.gradle"
                     )
-                    args(config.rsyncFromRemoteArgs)
+                    args(config.buildRsyncFromRemoteArgs())
                 }.mustRunAfter(execute) as Exec
 
                 if (config.downloadInParallel) {
@@ -362,13 +362,11 @@ open class MirakleExtension {
             "--archive",
             "--delete"
     )
-        get() = field.plus(excludeLocal.plus(excludeCommon).map { "--exclude=$it" })
 
     var rsyncFromRemoteArgs = setOf(
             "--archive",
             "--delete"
     )
-        get() = field.plus(excludeRemote.plus(excludeCommon).map { "--exclude=$it" })
 
     var sshArgs = emptySet<String>()
 
@@ -378,6 +376,15 @@ open class MirakleExtension {
     var downloadInterval = 2000L
 
     var breakOnTasks = emptySet<String>()
+
+    internal fun buildRsyncToRemoteArgs(): Set<String> =
+        rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
+
+    internal fun buildRsyncFromRemoteArgs(): Set<String> =
+        rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
+
+    private fun Set<String>.mapToRsyncExcludeArgs(): Set<String> =
+        this.plus(excludeCommon).map { "--exclude=$it" }.toSet()
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
